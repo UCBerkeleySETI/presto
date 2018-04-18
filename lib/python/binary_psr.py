@@ -139,7 +139,11 @@ class binary_psr:
                 clockwise).  'inc' is the inclination of the orbit in degrees.
                 MJD can be an array.  The return value is (xs, ys).  If returnz
                 is True, return (xs, ys, zs), where 'z' is the other in-the-sky
-                direction.
+                direction.  These coordinates correspond to the I, J, and K vectors
+                in Damour & Taylor (1992) in the following way:
+                x = -K
+                y = -I
+                z = -J
         """
         ma, ea, ta = self.calc_anoms(MJD)
         ws = self.calc_omega(MJD)
@@ -157,20 +161,20 @@ class binary_psr:
         """
         reflex_motion(MJD, inc, Omega, dist):
             Return the projected on-sky orbital reflex motion in mas referenced
-                to Omega, which is the line-of-nodes, counter-clockwise from
-                North towards East.  The distance to the pulsar is in kpc.
-                The returned values are dRA (corrected by cos(dec)), dDEC.
+                to Omega, which is the line-of-nodes, clockwise from East towards
+                North.  This is the definition of Omega used by e.g. Damour & 
+                Taylor (1992) and Kopeikin (1996), but note that it differs from
+                most non-pulsar applications (in which Omega is measured counter-
+                clockwise from North to East). The distance to the pulsar is in 
+                kpc. The returned values are dRA (corrected by cos(dec)), dDEC.
         """
         xs, ys, zs = self.position(MJD, inc, returnz=True)
-        # With this defn of Omega, the rotation is a "standard" rotation
-        # matrix with the angle theta = Omega + 90 deg, although RA increases
-        # in the opposite direction (so dRA gets a negative)
-        ys = -ys / dist * 2.003988804115705e-03 # in mas
-        zs = -zs / dist * 2.003988804115705e-03 # in mas
-        theta = Omega + 90.0
-        sino, coso = Num.sin(theta*DEGTORAD), Num.cos(theta*DEGTORAD)
-        dRA = -(coso * zs - sino * ys) / Num.cos(self.par.DEC_RAD)
-        dDEC = (sino * zs + coso * ys)
+        ys = -ys / dist * 2.003988804115705e-03 # in mas, (i.e. DT92 "I")
+        zs = -zs / dist * 2.003988804115705e-03 # in mas, (i.e. DT92 "J")
+        sino, coso = Num.sin(omega*DEGTORAD), Num.cos(omega*DEGTORAD)
+        # Convert from DT92 I, J to I_0, J_0 (= RA, Dec)
+        dRA  = (coso * ys - sino * zs) / Num.cos(self.par.DEC_RAD)
+        dDEC = (sino * ys + coso * zs)
         return dRA, dDEC
 
     def demodulate_TOAs(self, MJD):
@@ -196,34 +200,36 @@ class binary_psr:
             ts = ts - dts
         return ts
 
-    def shapiro_delays(self, R, S, ecc_anoms):
+    def shapiro_delays(self, R, S, MJD):
         """
-        shapiro_delays(R, S, ecc_anoms):
+        shapiro_delays(R, S, MJD):
             Return the predicted Shapiro delay (in us) for a variety of
-                eccentric anomalies (in radians) given the R and
-                S parameters.
+                barycentric MJDs, given the R and S parameters.
         """
-        canoms = Num.cos(ecc_anoms)
-        sanoms = Num.sin(ecc_anoms)
+        ma, ea, ta = self.calc_anoms(MJD)
+        ws = self.calc_omega(MJD)
+        canoms = Num.cos(ea)
+        sanoms = Num.sin(ea)
         ecc = self.par.E
-        omega = self.par.OM * DEGTORAD
-        cw = Num.cos(omega)
-        sw = Num.sin(omega)
+        cw = Num.cos(ws)
+        sw = Num.sin(ws)
         delay = -2.0e6*R*Num.log(1.0 - ecc*canoms -
                                  S*(sw*(canoms-ecc) +
                                     Num.sqrt((1.0 - ecc*ecc)) * cw * sanoms))
         return delay
 
 
-    def shapiro_measurable(self, R, S, mean_anoms):
+    def shapiro_measurable(self, R, S, MJD):
         """
-        shapiro_measurable(R, S, mean_anoms):
+        shapiro_measurable(R, S, MJD):
             Return the predicted _measurable_ Shapiro delay (in us) for a
-                variety of mean anomalies (in radians) given the R
-                and S parameters.  This is eqn 28 in Freire & Wex
-                2010 and is only valid in the low eccentricity limit.
+                variety of barycentric MJDs, given the R and S parameters.  
+                This is eqn 28 in Freire & Wex 2010 and is only valid in 
+                the low eccentricity limit.
         """
-        Phi = mean_anoms + self.par.OM * DEGTORAD
+        ma, ea, ta = self.calc_anoms(MJD)
+        ws = self.calc_omega(MJD)
+        Phi = ma + ws
         cbar = Num.sqrt(1.0 - S**2.0)
         zeta = S / (1.0 + cbar)
         h3 = R * zeta**3.0
@@ -238,11 +244,12 @@ class binary_psr:
 if __name__=='__main__':
     from Pgplot import *
     
-    psrA = binary_psr("0737A_Lyne_DD.par")
-    times = psr_utils.span(0.0, psrA.par.PB, 1000) + psrA.par.T0
+    # The following reproduces the RV plot in Hulse & Taylor, 1975
+    psrA = binary_psr("B1913+16.par")
+    T0 = 42320.933 # From Hulse & Taylor, 1975
+    times = psr_utils.span(0.0, psrA.par.PB, 1000) + T0
     rv = psrA.radial_velocity(times)
-    plotxy(rv, (times-psrA.par.T0)*24,
+    plotxy(rv, (times-T0)*24,
            labx="Hours since Periastron", laby="Radial Velocity (km.s)")
     closeplot()
-    print psrA.calc_anoms(52345.32476876)
     

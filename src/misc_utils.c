@@ -219,12 +219,18 @@ void telescope_to_tempocode(char *inname, char *outname, char *obscode)
     } else if (strcmp(scope, "srt") == 0) {
         strcpy(obscode, "SR");
         strcpy(outname, "Sardinia Radio Telescope");
+    } else if (strcmp(scope, "fast") == 0) {
+        strcpy(obscode, "FA");
+        strcpy(outname, "FAST");
     } else if (strcmp(scope, "wsrt") == 0) {
         strcpy(obscode, "WT");
         strcpy(outname, "WSRT");
     } else if (strcmp(scope, "gmrt") == 0) {
         strcpy(obscode, "GM");
         strcpy(outname, "GMRT");
+    } else if (strcmp(scope, "chime") == 0) {
+        strcpy(obscode, "CH");
+        strcpy(outname, "CHIME");
     } else if (strcmp(scope, "lofar") == 0) {
         strcpy(obscode, "LF");
         strcpy(outname, "LOFAR");

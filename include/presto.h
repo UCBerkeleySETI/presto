@@ -332,7 +332,6 @@ void binary_velocity(double T, orbitparams * orbit,
   /*  Return the minimum and maximum orbital velocities of a pulsar    */
   /*  during an observation as a fraction of the speed of light.       */
   /*  Arguments:                                                       */
-  /*    'ppsr' is the period of the pusar in seconds.                  */
   /*    'T' is the length of the observation in seconds.               */
   /*    'orbit' is a ptr to a orbitparams structure containing the     */
   /*       Keplerian orbital parameters of the binary system.          */
@@ -374,7 +373,22 @@ fcomplex *gen_z_response(double roffset, int numbetween, double z, \
   /*       contain.                                                    */
 
 fcomplex *gen_w_response(double roffset, int numbetween, double z, \
-			 double w, int numkern);
+                         double w, int numkern);
+  /*  Generate the response function for Fourier f-dot interpolation.  */
+  /*  Arguments:                                                       */
+  /*    'roffset' is the offset in Fourier bins for the full response  */
+  /*       (i.e. At this point, the response would equal 1.0)          */
+  /*    'numbetween' is the number of points to interpolate between    */
+  /*       each standard FFT bin.  (i.e. 'numbetween' = 1 = interbins) */
+  /*    'z' is the average Fourier Frequency derivative (# of bins     */
+  /*       the signal smears over during the observation).             */
+  /*    'w' is the Fourier Frequency 2nd derivative (change in the     */
+  /*       Fourier f-dot during the observation).                      */
+  /*    'numkern' is the number of complex points that the kernel will */
+  /*       contain.                                                    */
+
+fcomplex *gen_w_response2(double roffset, int numbetween, double z, \
+                          double w, int numkern);
   /*  Generate the response function for Fourier f-dot interpolation.  */
   /*  Arguments:                                                       */
   /*    'roffset' is the offset in Fourier bins for the full response  */
@@ -415,7 +429,7 @@ float get_numphotons(FILE * file);
   /* Arguments:                                              */
   /*   'file' is a pointer to the file you want to access.   */
 
-double get_localpower(fcomplex *data, int numdata, double r);
+double get_localpower(fcomplex *data, long numdata, double r);
   /* Return the local power level at specific FFT frequency.  */
   /* Arguments:                                               */
   /*   'data' is a pointer to a complex FFT.                  */
@@ -423,7 +437,7 @@ double get_localpower(fcomplex *data, int numdata, double r);
   /*   'r' is the Fourier frequency in data that we want to   */
   /*      interpolate.                                        */
 
-double get_localpower3d(fcomplex *data, int numdata, double r, \
+double get_localpower3d(fcomplex *data, long numdata, double r, \
 			double z, double w);
   /* Return the local power level around a specific FFT           */
   /* frequency, f-dot, and f-dotdot.                              */
@@ -437,7 +451,7 @@ double get_localpower3d(fcomplex *data, int numdata, double r, \
   /*   'w' is the Fourier Frequency 2nd derivative (change in the */
   /*       Fourier f-dot during the observation).                 */
 
-void get_derivs3d(fcomplex *data, int numdata, double r, \
+void get_derivs3d(fcomplex *data, long numdata, double r, \
 		  double z, double w, double localpower, \
 		  rderivs *result);
   /* Return an rderives structure that contains the power,      */
@@ -704,7 +718,7 @@ void get_rawbin_cand(char *filenm, int candnum, rawbincand * cand);
 /*  read_fft.c:  */
 /*  Functions for getting information from an FFT file  */
 
-fcomplex *read_fcomplex_file(FILE *file, int firstpt, int numpts);
+fcomplex *read_fcomplex_file(FILE *file, long firstpt, long numpts);
 /* Return an fcomplex vector with complex data taken from a file. */
 /* Argumants:                                                     */
 /*   'file' is a pointer to the file you want to access.          */
@@ -715,7 +729,7 @@ fcomplex *read_fcomplex_file(FILE *file, int firstpt, int numpts);
 /*       If the number of bins to read takes us past the end of   */
 /*       file, the returned vector will be zero padded.           */
 
-float *read_float_file(FILE *file, int firstpt, int numpts);
+float *read_float_file(FILE *file, long firstpt, long numpts);
 /* Return a float vector with complex data taken from a file.     */
 /* Argumants:                                                     */
 /*   'file' is a pointer to the file you want to access.          */
@@ -787,7 +801,15 @@ float percolate_bin(binaryprops * list, int nlist);
 
 /* From prep_corr.c  */
 
-void spread_with_pad(fcomplex *data, int numdata, \
+int next_good_fftlen(int N);
+/* Return one of the shortest, yet best performing, FFT lengths larger
+ * than N.  This assumes FFTW. */
+
+int fftlen_from_kernwidth(int kernwidth);
+  /* return the length of the optimal FFT to use for correlations with
+   * some kernel width kernwidth.  This assumes FFTW. */
+
+void spread_with_pad(fcomplex *data, int numdata,   \
 		     fcomplex *result, int numresult, \
 		     int numbetween, int numpad);
   /* Prepare the data array for correlation by spreading         */
@@ -1030,7 +1052,29 @@ fcomplex *corr_rz_interp(fcomplex *data, int numdata, int numbetween, \
   /*   'nextbin' will contain the bin number of the first bin not    */
   /*      interpolated in data.                                      */
 
-fcomplex *corr_rzw_interp(fcomplex *data, int numdata, int numbetween, \
+fcomplex ***corr_rzw_vol(fcomplex * data, int numdata, int numbetween, \
+                         int startbin, double zlo, double zhi, int numz, \
+                         double wlo, double whi, int numw, int fftlen, \
+                         presto_interp_acc accuracy, int *nextbin);
+  /* This routine uses the correlation method to do Fourier          */
+  /* complex interpolations of the f-fdot-fdotdot volume.            */
+  /* Arguments:                                                      */
+  /*   'data' is a complex array of the data to be interpolated.     */
+  /*   'numdata' is the number of complex points (bins) in data.     */
+  /*   'numbetween' is the number of points to interpolate per bin.  */
+  /*   'startbin' is the first bin to use in data for interpolation. */
+  /*   'zlo' is the lowest fdot to use (z=f-dot*T^2)                 */
+  /*   'zhi' is the highest fdot to use (z=f-dot*T^2)                */
+  /*   'numz' is the number of z values to use to make the volume    */
+  /*   'wlo' is the lowest fdotdot to use (w=f-dotdot*T^3)           */
+  /*   'whi' is the highest fdotdot to use (w=f-dotdot*T^3)          */
+  /*   'numw' is the number of w values to use to make the volume    */
+  /*   'fftlen' is the # of complex pts in kernel and result.        */
+  /*   'accuracy' is either HIGHACC or LOWACC.                       */
+  /*   'nextbin' will contain the bin number of the first bin not    */
+  /*      interpolated in data.                                      */
+
+    fcomplex *corr_rzw_interp(fcomplex *data, int numdata, int numbetween, \
 			  int startbin, double z, double w, int fftlen, \
 			  presto_interp_acc accuracy, int *nextbin);
   /* This routine uses the correlation method to do a Fourier        */
@@ -1078,12 +1122,12 @@ void rzw_interp(fcomplex *data, int numdata, double r, double z, \
 
 /* In maximize_r.c and maximize_rw.c */
 
-double max_r_arr(fcomplex *data, int numdata, double rin, 
+double max_r_arr(fcomplex *data, long numdata, double rin, 
 		 double *rout, rderivs *derivs);
   /* Return the Fourier frequency that maximizes the power.  */
 
 
-double max_rz_arr(fcomplex *data, int numdata, double rin, double zin, \
+double max_rz_arr(fcomplex *data, long numdata, double rin, double zin, \
 		  double *rout, double *zout, rderivs * derivs);
   /* Return the Fourier frequency and Fourier f-dot that      */ 
   /* maximizes the power.                                     */
@@ -1094,33 +1138,32 @@ double max_rz_file(FILE *fftfile, double rin, double zin, \
   /* maximizes the power of the candidate in 'fftfile'.       */
 
 
-void max_rz_arr_harmonics(fcomplex * data[], int num_harmonics,
-                            int r_offset[],
-                            int numdata, double rin, double zin,
-                            double *rout, double *zout, rderivs derivs[],
-                            double power[]);
+void max_rz_arr_harmonics(fcomplex data[], long numdata,
+                          int num_harmonics,
+                          double rin, double zin,
+                          double *rout, double *zout,
+                          rderivs derivs[], double powers[]);
 /* Return the Fourier frequency and Fourier f-dot that      */
 /* maximizes the power.                                     */
 
-void max_rz_file_harmonics(FILE * fftfile, int num_harmonics,
-                             int lobin,
-                             double rin, double zin,
-                             double *rout, double *zout, rderivs derivs[],
-                             double maxpow[]);
-/* Return the Fourier frequency and Fourier f-dot that      */
+void max_rzw_arr_harmonics(fcomplex data[], long numdata,
+                           int num_harmonics,
+                           double rin, double zin, double win,
+                           double *rout, double *zout, double *wout,
+                           rderivs derivs[], double powers[]);
+/* Return the Fourier frequency, f-dot, and f-dotdot that       */
+/* maximizes the *summed* power of the multi-harmonic candidate */
+
+double max_rzw_arr(fcomplex *data, long numdata, double rin, double zin, \
+                   double win, double *rout, double *zout,              \
+                   double *wout, rderivs * derivs);
+/* Return the Fourier frequency, f-dot, and fdotdot that    */ 
+/* maximizes the power.                                     */
+
+double max_rzw_file(FILE * fftfile, double rin, double zin, double win, \
+                    double *rout, double *zout, double *wout, rderivs * derivs);
+/* Return the Fourier frequency, f-dot, and fdotdot that    */
 /* maximizes the power of the candidate in 'fftfile'.       */
-
-
-double max_rzw_arr(fcomplex *data, int numdata, double rin, double zin, \
-		   double win, double *rout, double *zout, \
-		   double *wout, rderivs * derivs);
-  /* Return the Fourier frequency, f-dot, and fdotdot that    */ 
-  /* maximizes the power.                                     */
-
-double max_rz_file(FILE *fftfile, double rin, double zin, \
-		   double *rout, double *zout, rderivs * derivs);
-  /* Return the Fourier frequency and Fourier f-dot that      */ 
-  /* maximizes the power of the candidate in 'fftfile'.       */
 
 
 /* In fold.c */
@@ -1306,7 +1349,9 @@ void barycenter(double *topotimes, double *barytimes, \
   /* "dd:mm:s.ssss" for DEC.  The observatory site is passed  */
   /* as a 2 letter ITOA code.  This observatory code must be  */
   /* found in obsys.dat (in the TEMPO paths).  The ephemeris  */
-  /* is currently "DE200" or "DE405".                         */
+  /* found in obsys.dat (in the TEMPO paths).  The ephemeris  */
+  /* is the full name of an ephemeris supported by TEMPO,     */
+  /* examples include DE200, DE421, or DE436.                 */
 
 fftcand *search_fft(fcomplex *fft, int numfft, int lobin, int hibin, 
 		    int numharmsum, int numbetween, 
