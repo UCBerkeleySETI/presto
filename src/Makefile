@@ -25,8 +25,8 @@ PNGLINK := $(shell pkg-config --libs libpng)
 
 # Include and link information for PGPLOT v5.X (including shared libs!)
 # Typically you need to have your PGPLOT_DIR environment variable set
-PGPLOTINC = -I$(PGPLOT_DIR)
-PGPLOTLINK = -L$(PGPLOT_DIR) -lcpgplot -lpgplot $(X11LINK) $(PNGLINK)
+PGPLOTINC = -I/usr/include
+PGPLOTLINK = -L/usr/lib -lcpgplot -lpgplot $(X11LINK) $(PNGLINK)
 
 # Include and link information for the FFTW 3.X single-precision library
 FFTINC := $(shell pkg-config --cflags fftw3f)
@@ -55,16 +55,15 @@ USEPROFILE = false
 
 # Very recent Intel CPUs might see a few percent speedup using -mavx
 CFLAGS = -I$(PRESTO)/include $(GLIBINC) $(CFITSIOINC) $(PGPLOTINC) $(FFTINC) \
-	-DUSEFFTW -DUSEMMAP -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
-	-g -Wall -W -fPIC -O3 -ffast-math
+	-g -Wall -W -fPIC -O3 -ffast-math -DUSEFFTW -DUSEMMAP -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 CLINKFLAGS = $(CFLAGS)
 
 # Add some GCC-specific flags that are useful
 ifeq ($(CC),gcc)
-	CFLAGS += -Wno-unused-result -Wno-unused-but-set-variable \
+#	CFLAGS += -Wno-unused-result -Wno-unused-but-set-variable \
 		-Wno-unused-but-set-parameter
 # The following is great as long as your GCC is > v 4.9
-#	CFLAGS += -fdiagnostics-color=auto
+	CFLAGS += -fdiagnostics-color=auto
 endif
 
 # NOTE:  Be careful of upping the optimization on the

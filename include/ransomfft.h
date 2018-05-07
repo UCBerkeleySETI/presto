@@ -30,9 +30,8 @@ typedef fcomplex rawtype;
 #endif				/* _RAWTYPE_DECLARED_ */
 
 /* Figure out which FFTs we are using */
-
 #ifndef COMPLEXFFT
-#if defined USEFFTW
+#ifdef USEFFTW
   #define COMPLEXFFT    fftwcall
   #include "fftw3.h"
   void fftwcall(fcomplex *indata, long nn, int isign);
@@ -61,7 +60,6 @@ typedef fcomplex rawtype;
 /* The FAST FFTs we will use                                     */
 /* Note:  A standard forward transform (with negative exponent)  */
 /*        is called by setting isign=-1                          */
-
 long long good_factor(long long nn);
 void tablesixstepfft(fcomplex *indata, long nn, int isign);
 void realfft(float data[], long n, int isign);
