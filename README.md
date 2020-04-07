@@ -3,32 +3,87 @@
 http://www.cv.nrao.edu/~sransom/presto/
 
 PRESTO is a large suite of pulsar search and analysis software
-developed by Scott Ransom mostly from scratch, and released under the
-GPL (v2).  It was primarily designed to efficiently search for binary
-millisecond pulsars from long observations of globular clusters
-(although it has since been used in several surveys with short
-integrations and to process a lot of X-ray data as well).  It is
-written primarily in ANSI C, with many of the recent routines in
+developed primarily by Scott Ransom mostly from scratch, and released
+under the GPL (v2).  It was primarily designed to efficiently search
+for binary millisecond pulsars from long observations of globular
+clusters (although it has since been used in several surveys with
+short integrations and to process a lot of X-ray data as well).  It
+is written primarily in ANSI C, with many of the recent routines in
 Python.  According to Steve Eikenberry, PRESTO stands for: PulsaR
 Exploration and Search TOolkit!
 
-**PRESTO has discovered over 600 pulsars, including more than 230
+**PRESTO has discovered over 700 pulsars, including almost 300
 recycled and/or binary pulsars!**
 
-## New in Version 2.1:
- * `accelsearch` now has a "jerk" search capability (thanks to UVA
-   undergrad Bridget Andersen for help with this!).  This makes
+## New in Version 3.0.1:
+ * This is a minor release which fixes several issues and adds some 
+   minor improvements:
+   * Fix of long-standing `rfifind` bug that could cause the program
+     to hang if channels had zero variance
+   * Multiple Python3-related bug fixes
+   * Added `-debug` flag to `prepfold` to allow debugging of TEMPO
+     calls to make polycos
+   * `DDplan.py` can now read observation parameters from filterbank
+     or PSRFITS input files.  And you can write a `dedisp_*.py`
+     dedispersion script, based on the plan, using the `-w` option
+   * The `rednoise` program now writes a corresponding *_red.inf file
+   * Update of the Tutorial document, including a new slide on red noise
+
+## In Version 3.0:
+ * This major release of PRESTO includes a massive restructuring
+   of python code and capabilities.  Things should work with Python
+   versions 2.7 and Python 3.6 and 3.7 at least.  The installation
+   of the python code has changed and has become more "pythonic"
+   so that PYTHONPATH is not needed, and all of the various modules
+   are now under a top-level "presto" module.  For example, to
+   use the psr_utils module you would now do:
+   
+   `import presto.psr_utils as pu`
+   
+   rather than
+
+   `import psr_utils as pu`
+
+   All of these changes will likely lead to code breakage and bugs!
+
+   Please check your code and processing carefully and post issues
+   (and hopefully pull requests) if you find them.
+
+   The installation instructions have been updated in the INSTALL file.
+
+   Huge thanks thanks go to **Gijs Molenaar, Matteo Bachetti, and
+   Paul Ray** for the work that they have done helping with this!
+
+ * There is also a new "examplescripts" directory where you will
+   find some example code to do a lot of important things, like
+   * Fully dedispersing an observation: `dedisp.py`
+   * Fully searching a dedispersed observation: `full_analysis.py`
+   * Sifting the results of a full search: `ACCEL_sift.py`
+   * Searching short chunks of a long time series: `short_analysis_simple.py`
+   * Making a really nice P-Pdot plane: `ppdot_plane_plot.py`
+   * and a few others.
+
+## Status of Version 2.2:
+ * Version 2.2 was the last version of PRESTO to work with the
+   old-style python interface which requires Python v2.7 or earlier
+   and is "installed" in-place and used via having $PRESTO/lib/python
+   in your PYTHONPATH.  There will probably be occasional bug fixes
+   for v2.2 in the `v2.2maint` branch of PRESTO.  You can get it
+   using:
+
+   `git checkout -b v2.2maint origin/v2.2maint`
+
+   and then installing as per the INSTALL file.
+
+## Improvements in Version 2.1:
+ * `accelsearch` now has a "jerk" search capability (thanks to (then)
+   UVA undergrad Bridget Andersen for help with this!).  This makes
    searches take a *lot* longer, but definitely improves sensitivity
    when the observation duration is 5-15% of the duration of the orbital
    period.  Typically -wmax should be set to 3-5x -zmax (and you probably
    never need to set -zmax to anything larger than 300).
  * Ability to ignore bad channels on the command line (-ignorechan)
    (see `rfifind_stats.py` and `weights_to_ignorechan.py`)
- * Lots of new python utilities (such as for handling RFI, showing
-   bandpasses, making waterfall plots, ...)
- * New wrappers for the python interface (will make the transition
-   to Python 3.X much smoother later this year)
- * Many bug fixes and minor improvements
 
 ## About PRESTO:
 PRESTO is written with portability, ease-of-use, and memory efficiency
@@ -84,23 +139,25 @@ often required when working with pulsar data such as time conversions,
 Fourier transforms, time series and FFT exploration, byte-swapping,
 etc.
 
-The Fourier-Domain acceleration search technique that PRESTO uses in
-the routine accelsearch is described in [Ransom, Eikenberry, and
-Middleditch
-(2002)](http://adsabs.harvard.edu/abs/2002AJ....124.1788R), and the
-phase-modulation search technique used by search_bin is described in
+**References**: The Fourier-Domain acceleration search technique
+that PRESTO uses in the routine `accelsearch` is described in
+[Ransom, Eikenberry, and Middleditch
+(2002)](https://ui.adsabs.harvard.edu/abs/2002AJ....124.1788R/abstract),
+the "jerk" search capability is described in
+[Andersen & Ransom (2018)](https://ui.adsabs.harvard.edu/abs/2018ApJ...863L..13A/abstract),
+and the phase-modulation search technique used by `search_bin` is described in
 [Ransom, Cordes, and Eikenberry
-(2003)](http://adsabs.harvard.edu/abs/2003ApJ...589..911R).  Some
+(2003)](https://ui.adsabs.harvard.edu/abs/2003ApJ...589..911R/abstract).  Some
 other basic information about PRESTO can be found in my
-[thesis](http://www.cv.nrao.edu/~sransom/ransom_thesis_2001.pdf).  I
-will eventually get around to finishing the documentation for PRESTO,
-but until then you should know that each routine returns its basic
-usage when you call it with no arguments.  I am also willing to
-provide limited support via email or telephone (434-296-0320).
+[thesis](http://www.cv.nrao.edu/~sransom/ransom_thesis_2001.pdf).
 
-**Tutorial**: Note that in the "docs" directory there is a tutorial
-which walks you through all the main steps of finding pulsars using
-PRESTO.
+**Support/Docs**:  I may eventually get around to finishing the
+documentation for PRESTO, but until then you should know that each
+routine returns its basic usage when you call it with no arguments.
+I am also willing to provide limited support via email (see below).
+
+**Tutorial**: There is a tutorial in the "docs" directory which walks
+you through all the main steps of finding pulsars using PRESTO.
 
 ## Getting it: 
 The PRESTO source code is released under the GPL and
@@ -115,7 +172,7 @@ To update it on a regular basis do
     cd $PRESTO
     git pull
 
-and then re-make things in $PRESTO/src. 
+and then re-make things in $PRESTO/src.
 
 For more detailed installation instructions, see INSTALL.
 
@@ -127,7 +184,6 @@ If you want the "classic" branch, do the following:
 
     git clone git://github.com/scottransom/presto.git
     cd presto
-    git remote add classic origin/classic 
     git checkout -b classic origin/classic
 
 then build as per the (old) INSTALL file.
@@ -143,9 +199,16 @@ request"!
 
 ### Final Thoughts:
 Please let me know if you decide to use PRESTO for any "real"
-searches.  And if you find anything with it, it would be great if you
-would cite either my thesis or whichever of the two papers listed
-above is appropriate.  Thanks!
+searches, especially if you find pulsars with it!
+
+And if you find anything with it, it would be great if you would cite
+either my thesis or whichever of the three papers listed above is
+appropriate.
+
+Also note that many people are now citing software using the ASCL.
+[PRESTO is there as well](https://www.ascl.net/1107.017).
+
+Thanks!
 
 ### Acknowledgements:
 Big thanks go to Steve Eikenberry for his help developing the
@@ -154,8 +217,8 @@ to process BCPM, SCAMP, and Spigot data, Jason Hessels for many
 contributions to the Python routines, and (alphabetical): Bridget
 Andersen, Anne Archibald, Cees Bassa, Matteo Bachetti, Slavko
 Bogdanov, Fernando Camilo, Paul Demorest, Paulo Freire, Chen Karako,
-Mike Keith, Patrick Lazarus, Maggie Livingstone, Chitrang Patel, Paul
-Ray, Paul Scholz, Ingrid Stairs, Kevin Stovall, Joeri van Leeuwen for
-many comments, suggestions and patches!
+Mike Keith, Patrick Lazarus, Maggie Livingstone, Gijs Molenaar,
+Chitrang Patel, Paul Ray, Paul Scholz, Ingrid Stairs, Kevin Stovall,
+Joeri van Leeuwen for many comments, suggestions and patches!
 
 Scott Ransom <sransom@nrao.edu>

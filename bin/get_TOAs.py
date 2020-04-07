@@ -1,11 +1,13 @@
 #!/usr/bin/env python
-import struct, getopt, sys, fftfit, psr_utils
+from __future__ import print_function
+from builtins import range
+import getopt, sys
+from presto import fftfit
+from presto import psr_utils
 import numpy as Num
-from infodata import infodata
-from prepfold import pfd
-from polycos import polycos
-from psr_constants import *
-from types import StringType, FloatType, IntType
+from presto.prepfold import pfd
+from presto.polycos import polycos
+from presto.psr_constants import *
 
 scopes = {'GBT':'1',
           'Arecibo':'3',
@@ -15,6 +17,7 @@ scopes = {'GBT':'1',
           'LWA1': 'x',
           'LWA': 'x',
           'VLA': 'c',
+          'FAST': 'k',
           'Geocenter': 'o'}
 
 scopes2 = {'GBT':'gbt',
@@ -24,6 +27,7 @@ scopes2 = {'GBT':'gbt',
           'LWA1': 'lwa1',
           'LWA': 'lwa1',
           'VLA': 'vla',
+          'FAST': 'fast',
           'Geocenter': 'coe'}
 
 def measure_phase(profile, template, rotate_prof=True):
@@ -156,14 +160,14 @@ if __name__ == '__main__':
             for subs in a.split(','):
                 if (subs.find("-") > 0):
                     lo, hi = subs.split("-")
-                    kill.extend(range(int(lo), int(hi)+1))
+                    kill.extend(list(range(int(lo), int(hi)+1)))
                 else:
                     kill.append(int(subs))
         if o in ("-i", "--kints"):
             for ints in a.split(','):
                 if (ints.find("-") > 0):
                     lo, hi = ints.split("-")
-                    kints.extend(range(int(lo), int(hi)+1))
+                    kints.extend(list(range(int(lo), int(hi)+1)))
                 else:
                     kints.append(int(ints))
 
@@ -188,6 +192,14 @@ if __name__ == '__main__':
     timestep_sec = fold.T / numtoas
     timestep_day = timestep_sec / SECPERDAY
     fold.epoch = fold.epochi+fold.epochf
+
+    # If the requested number of TOAs doesn't divide into the
+    # number of time intervals, then exit
+    if fold_pfd.npart % numtoas:
+        sys.stderr.write(
+            "Error: # of TOAs (%d) doesn't divide # of time intervals (%d)!\n" % \
+            (numtoas, fold_pfd.npart))
+        sys.exit(2)
 
     # Over-ride the DM that was used during the fold
     if (DM!=0.0):
@@ -263,7 +275,7 @@ if __name__ == '__main__':
 
     # Read the polyco file (if required)
     if (fold.psr and fold.topo):
-        if (fold_pfd.__dict__.has_key("polycos") and
+        if ("polycos" in fold_pfd.__dict__ and
             not fold_pfd.polycos==0):
             pcs = fold_pfd.polycos
         else:
@@ -280,7 +292,7 @@ if __name__ == '__main__':
     #
 
     if t2format:
-        print "FORMAT 1"
+        print("FORMAT 1")
         
     for ii in range(numtoas):
 
@@ -323,17 +335,17 @@ if __name__ == '__main__':
                     continue
                 # Interpolate the data
                 if (len(template) > fold_pfd.proflen):
-                    prof = psr_utils.linear_interpolate(prof, len(template)/fold_pfd.proflen)
+                    prof = psr_utils.linear_interpolate(prof, len(template)//fold_pfd.proflen)
                     if not ii and not jj:
                         sys.stderr.write("Note: Interpolating the data for '%s'\n"%fold_pfd.filenm)
                 # Interpolate the template
                 elif (1):
-                    template = psr_utils.linear_interpolate(template, fold_pfd.proflen/len(template))
+                    template = psr_utils.linear_interpolate(template, fold_pfd.proflen//len(template))
                     if not ii and not jj:
                         sys.stderr.write("Note: Interpolating the template for '%s'\n"%fold_pfd.filenm)
                 # Downsample the data (Probably not a good idea)
                 else:
-                    prof = psr_utils.downsample(prof, fold_pfd.proflen/len(template))
+                    prof = psr_utils.downsample(prof, fold_pfd.proflen//len(template))
                     if not ii and not jj:
                         sys.stderr.write("Note:  Downsampling the data for '%s'\n"%fold_pfd.filenm)
 
@@ -387,5 +399,6 @@ if __name__ == '__main__':
                     sys.stderr.write("FFTFIT results:  b = %.4g +/- %.4g   SNR = %.4g +/- %.4g" %
                           (b, errb, snr, esnr))
 
-            except ValueError, fftfit.error:
+            except ValueError as xxx_todo_changeme:
+                fftfit.error = xxx_todo_changeme
                 pass

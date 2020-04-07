@@ -2,8 +2,6 @@
 #include "stdint.h"
 #include <errno.h>
 
-#if defined USEFFTW
-
 // Following gives the same as FFTW's fftwf_alignment_of when
 // BYTE_COUNT = 16, which is what we need for SSE.
 // 0 means that it is aligned on BYTE_COUNT boundaries
@@ -123,7 +121,7 @@ void fftwcall(fcomplex * indata, long nn, int isign)
         //printf("Making a new plan for nn=%ld, align=%d (dropping nn=%ld) %d\n",
         //       nn, indata_align, nncache[oldestplan], badct++);
         // We don't want to wait around to measure huge transforms
-        planflag = (nn > 90000) ? FFTW_ESTIMATE : FFTW_MEASURE;
+        planflag = (nn > 16384) ? FFTW_ESTIMATE : FFTW_MEASURE;
         // FFTW_MEASURE will destroy the input/output data, so copy it
         datacopy = gen_cvect(nn);
         memcpy(datacopy, dataptr, nn * sizeof(fcomplex));
@@ -153,34 +151,3 @@ void fftwcall(fcomplex * indata, long nn, int isign)
     }
     firsttime = 0;
 }
-
-
-#elif defined USESGIFFT
-
-
-void sgifftcall(fcomplex * indata, long nn, int isign)
-{
-    int expon;
-    double fracpart;
-    static complex *coeff[30];
-
-    /* Determine the twoth power of the length of the data */
-
-    fracpart = frexp((double) nn, &expon);
-    expon--;
-
-    /* If we are calling using an nn we haven't seen before */
-
-    if (coeff[expon] == NULL) {
-
-        /* Allocate coefficient array */
-
-        coeff[expon] = cfft1di(nn, NULL);
-
-    }
-    /* Do the FFT */
-
-    cfft1d(isign, nn, (complex *) indata, 1, coeff[expon]);
-}
-
-#endif

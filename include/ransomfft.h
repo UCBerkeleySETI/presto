@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
@@ -30,19 +31,12 @@ typedef fcomplex rawtype;
 #endif				/* _RAWTYPE_DECLARED_ */
 
 /* Figure out which FFTs we are using */
+
+#include "fftw3.h"
+void fftwcall(fcomplex *indata, long nn, int isign);
+void read_wisdom(void);
 #ifndef COMPLEXFFT
-#ifdef USEFFTW
-  #define COMPLEXFFT    fftwcall
-  #include "fftw3.h"
-  void fftwcall(fcomplex *indata, long nn, int isign);
-  void read_wisdom(void);
-#elif defined USESGIFFT
-  #define COMPLEXFFT    sgifftcall
-  #include "fft.h"
-  void sgifftcall(fcomplex *indata, long nn, int isign);
-#else
-  #define COMPLEXFFT    tablesixstepfft
-#endif
+#define COMPLEXFFT    fftwcall
 #endif
 
 #ifndef TWOPI
